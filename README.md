@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Attendly - NFC-Based Attendance Platform
 
-## Getting Started
+> "Google Classroom + NFC-based Attendance" for the World
 
-First, run the development server:
+Attendly is a comprehensive attendance management platform that combines the ease of classroom management with cutting-edge NFC technology for seamless attendance tracking.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Features
+
+- **Dual Portal System**: Separate dashboards for teachers and students
+- **NFC-Based Attendance**: Tap-to-mark attendance using NFC tags
+- **Class Management**: Create, manage, and schedule classes
+- **Real-time Notifications**: Email alerts for absent students
+- **Attendance Analytics**: Comprehensive reporting and analytics
+- **Invite System**: Easy class joining via invite links
+
+## 🛠 Tech Stack
+
+- **Frontend**: Next.js 15 with App Router
+- **Styling**: Tailwind CSS
+- **Authentication**: Supabase Auth
+- **Database**: Supabase PostgreSQL
+- **Email**: Resend/SendGrid
+- **Deployment**: Vercel
+
+## 📁 Project Structure
+
+```
+/app
+  /auth          # Authentication pages
+  /dashboard     # Role-based dashboards
+    /teacher     # Teacher portal
+    /student     # Student portal
+  /nfc           # NFC integration
+/lib             # Utility functions
+/types           # Type definitions
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🏃‍♂️ Getting Started
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
 
-## Learn More
+3. **Open your browser:**
+   Navigate to [http://localhost:3000](http://localhost:3000)
 
-To learn more about Next.js, take a look at the following resources:
+## 📋 Development Roadmap
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [x] Project initialization
+- [ ] Authentication system
+- [ ] Teacher dashboard
+- [ ] Student dashboard
+- [ ] NFC integration
+- [ ] Email notifications
+- [ ] Attendance analytics
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📚 Documentation
 
-## Deploy on Vercel
+For detailed project planning and feature specifications, see [PROJECT_PLAN.md](./PROJECT_PLAN.md).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🤝 Contributing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This is a learning project. Feel free to suggest improvements and enhancements.
+
+---
+
+Built with ❤️ using Next.js and modern web technologies.
