@@ -61,32 +61,39 @@ attendance_logs (id, student_id, class_id, date, status)
 ```bash
 /app
   /auth
-    login.jsx
-    register.jsx
+    login.jsx                 # React component with 'use client'
+    register.jsx              # React component with 'use client'
   /dashboard
     /teacher
-      create-class.jsx
-      class/[id].jsx
-      schedule.jsx
+      create-class.jsx         # React component for class creation
+      class/[id].jsx          # Dynamic route for class details
+      schedule.jsx            # Schedule management component
     /student
-      join-class.jsx
-      my-classes.jsx
-      attendance-history.jsx
+      join-class.jsx          # React component to join classes
+      my-classes.jsx          # Student's enrolled classes
+      attendance-history.jsx  # Attendance tracking view
   /nfc
-    tag-reader.jsx
+    tag-reader.jsx           # NFC integration component
 /lib
-  supabaseClient.js
-  email.js (SendGrid or SMTP)
+  supabaseClient.js          # Database connection
+  email.js                   # Email service (SendGrid or SMTP)
+  utils.js                   # Utility functions
 /types
-  user.js
-  class.js
-  attendance.js
+  user.js                    # User type definitions (JSDoc)
+  class.js                   # Class type definitions (JSDoc)
+  attendance.js              # Attendance type definitions (JSDoc)
+/components                  # Reusable React components
+  /ui                        # UI components (buttons, modals, etc.)
+  /forms                     # Form components
+/hooks                       # Custom React hooks
+/contexts                    # React Context providers
 ```
 
 ### ⚙️ Technologies Recommendation
 | Feature | Tool / Framework |
 |---------|------------------|
-| Web Framework | Next.js (App Router) |
+| Frontend Framework | **React 19** with Next.js 15 (App Router) |
+| Language | **JavaScript** (ES6+) |
 | Styling | Tailwind CSS |
 | Animation | Framer Motion (optional) |
 | Auth | Supabase / Firebase |
@@ -132,7 +139,10 @@ attendance_logs (id, student_id, class_id, date, status)
 
 ### 📋 Current Status
 - [x] Project plan documented
-- [ ] Next.js project initialized
+- [x] Next.js project initialized with **React + JavaScript**
+- [x] Folder structure created
+- [x] React components & utilities scaffolded
+- [x] Authentication context setup
 - [ ] Supabase setup
 - [ ] Auth system implementation
 - [ ] Teacher dashboard
