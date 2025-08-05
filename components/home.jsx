@@ -2,26 +2,56 @@
 import Link from "next/link";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
+import { CyclingTypewriterWithErase } from "@/components/ui/cycling-typewriter-with-erase";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 
 export default function Home() {
-  const words = [
-    {
-      text: "Revolutionizing",
-      className: "text-white",
-    },
-    {
-      text: "Attendance",
-      className: "text-blue-400",
-    },
-    {
-      text: "and",
-      className: "text-white",
-    },
-    {
-      text: "Check-in",
-      className: "text-blue-400",
-    },
+  const textOptions = [
+    [
+      {
+        text: "Revolutionizing",
+        className: "text-white",
+      },
+      {
+        text: "Attendance",
+        className: "text-white",
+      },
+      {
+        text: "and",
+        className: "text-white",
+      },
+      {
+        text: "Check-in",
+        className: "text-white",
+      },
+    ],
+    [
+      {
+        text: "Managing",
+        className: "text-white",
+      },
+      {
+        text: "students",
+        className: "text-white",
+      },
+      {
+        text: "got",
+        className: "text-white",
+      },
+      {
+        text: "a",
+        className: "text-white",
+      },
+      {
+        text: "lot",
+        className: "text-white",
+      },
+      {
+        text: "easier",
+        className: "text-white",
+      },
+    ]
   ];
 
   const brandWords = [
@@ -41,7 +71,13 @@ export default function Home() {
           transition={{ duration: 1, delay: 0.5 }}
           className="mb-8"
         >
-          <TypewriterEffect words={words} className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4" />
+          <CyclingTypewriterWithErase 
+            textOptions={textOptions} 
+            className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4"
+            typeSpeed={80}
+            eraseSpeed={40}
+            waitTime={1500}
+          />
         </motion.div>
 
         {/* Brand Name */}
@@ -54,6 +90,7 @@ export default function Home() {
           <TypewriterEffect 
             words={brandWords} 
             className="text-4xl md:text-6xl lg:text-7xl font-extrabold"
+            cursorClassName="hidden"
           />
         </motion.div>
 
@@ -73,61 +110,26 @@ export default function Home() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 4 }}
-          className="flex flex-col md:flex-row space-y-4 md:space-y-0 space-x-0 md:space-x-4"
+          className="flex flex-col md:flex-row space-y-4 md:space-y-0 space-x-0 md:space-x-6"
         >
-          <Link href="/auth/login">
+          <Link href="/auth/register?role=student">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="w-40 h-12 rounded-xl bg-blue-600 hover:bg-blue-700 border border-blue-500 text-white text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+              className="w-48 h-14 rounded-full bg-black text-white text-lg font-semibold transition-all duration-200 shadow-lg"
             >
-              Sign In
+              Student
             </motion.button>
           </Link>
-          <Link href="/auth/register">
+          <Link href="/teacher/dashboard">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="w-40 h-12 rounded-xl bg-transparent hover:bg-white/10 text-white border border-white/30 hover:border-white/50 text-sm font-semibold transition-all duration-200 backdrop-blur-sm"
+              className="w-48 h-14 rounded-full bg-white text-black text-lg font-semibold transition-all duration-200 shadow-lg"
             >
-              Get Started
+              Teacher
             </motion.button>
           </Link>
-        </motion.div>
-
-        {/* Features Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 4.5 }}
-          className="grid md:grid-cols-3 gap-6 mt-16 max-w-4xl"
-        >
-          <motion.div
-            whileHover={{ scale: 1.05, y: -5 }}
-            className="bg-white/10 backdrop-blur-md p-6 rounded-lg border border-white/20 hover:border-blue-400/50 transition-all duration-300"
-          >
-            <div className="text-3xl mb-4">📱</div>
-            <h3 className="text-lg font-semibold mb-2 text-blue-300">NFC Attendance</h3>
-            <p className="text-gray-300 text-sm">Tap to mark attendance with NFC tags</p>
-          </motion.div>
-          
-          <motion.div
-            whileHover={{ scale: 1.05, y: -5 }}
-            className="bg-white/10 backdrop-blur-md p-6 rounded-lg border border-white/20 hover:border-blue-400/50 transition-all duration-300"
-          >
-            <div className="text-3xl mb-4">🧑‍🏫</div>
-            <h3 className="text-lg font-semibold mb-2 text-blue-300">Class Management</h3>
-            <p className="text-gray-300 text-sm">Create and manage classes effortlessly</p>
-          </motion.div>
-          
-          <motion.div
-            whileHover={{ scale: 1.05, y: -5 }}
-            className="bg-white/10 backdrop-blur-md p-6 rounded-lg border border-white/20 hover:border-blue-400/50 transition-all duration-300"
-          >
-            <div className="text-3xl mb-4">📊</div>
-            <h3 className="text-lg font-semibold mb-2 text-blue-300">Real-time Analytics</h3>
-            <p className="text-gray-300 text-sm">Comprehensive attendance insights</p>
-          </motion.div>
         </motion.div>
 
         {/* Status Badge */}
