@@ -86,7 +86,7 @@ export default function TeacherLogin() {
     setError("");
 
     try {
-      const result = await signInWithGoogle();
+      const result = await signInWithGoogle("teacher"); // Pass teacher role explicitly
       if (result.success) {
         router.push("/teacher/dashboard");
       } else {

@@ -86,7 +86,7 @@ export default function StudentLogin() {
     setError("");
 
     try {
-      const result = await signInWithGoogle();
+      const result = await signInWithGoogle("student"); // Pass student role
       if (result.success) {
         router.push("/student/dashboard");
       } else {
