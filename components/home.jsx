@@ -5,8 +5,14 @@ import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { CyclingTypewriterWithErase } from "@/components/ui/cycling-typewriter-with-erase";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  const isFromDashboard = searchParams.get('from') === 'dashboard';
+  
+  // Skip animations if coming from dashboard
+  const skipAnimations = isFromDashboard;
   const textOptions = [
     [
       {
@@ -66,9 +72,9 @@ export default function Home() {
       <div className="relative z-10 flex flex-col items-center justify-center px-4 text-center">
         {/* Main Heading */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: skipAnimations ? 1 : 0, y: skipAnimations ? 0 : 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.5 }}
+          transition={{ duration: skipAnimations ? 0 : 1, delay: skipAnimations ? 0 : 0.5 }}
           className="mb-8"
         >
           <CyclingTypewriterWithErase 
@@ -82,9 +88,9 @@ export default function Home() {
 
         {/* Brand Name */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: skipAnimations ? 1 : 0, scale: skipAnimations ? 1 : 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 2.5 }}
+          transition={{ duration: skipAnimations ? 0 : 0.8, delay: skipAnimations ? 0 : 2.5 }}
           className="mb-8"
         >
           <TypewriterEffect 
@@ -96,9 +102,9 @@ export default function Home() {
 
         {/* Subtitle */}
         <motion.p
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: skipAnimations ? 1 : 0, y: skipAnimations ? 0 : 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 3.5 }}
+          transition={{ duration: skipAnimations ? 0 : 0.8, delay: skipAnimations ? 0 : 3.5 }}
           className="text-gray-300 text-lg md:text-xl mb-12 max-w-2xl"
         >
           NFC-powered attendance tracking that&apos;s as simple as a tap. 
@@ -107,12 +113,12 @@ export default function Home() {
 
         {/* Action Buttons */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: skipAnimations ? 1 : 0, y: skipAnimations ? 0 : 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 4 }}
+          transition={{ duration: skipAnimations ? 0 : 0.8, delay: skipAnimations ? 0 : 4 }}
           className="flex flex-col md:flex-row space-y-4 md:space-y-0 space-x-0 md:space-x-6"
         >
-          <Link href="/auth/register?role=student">
+          <Link href="/student/login">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -121,7 +127,7 @@ export default function Home() {
               Student
             </motion.button>
           </Link>
-          <Link href="/teacher/dashboard">
+          <Link href="/teacher/login">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -134,9 +140,9 @@ export default function Home() {
 
         {/* Status Badge */}
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={{ opacity: skipAnimations ? 1 : 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 5 }}
+          transition={{ duration: skipAnimations ? 0 : 0.8, delay: skipAnimations ? 0 : 5 }}
           className="mt-12 px-4 py-2 bg-blue-500/20 border border-blue-400/30 rounded-full"
         >
           <span className="text-blue-300 text-sm">🚧 Ready for Development Phase</span>

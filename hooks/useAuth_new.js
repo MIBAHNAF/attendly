@@ -29,8 +29,11 @@ export function useAuth(requiredRole = null, redirectTo = "/") {
           
           // Check role-based access
           if (requiredRole && result.data.role !== requiredRole) {
+            console.log(`Access denied. Required: ${requiredRole}, User has: ${result.data.role}`);
             router.push(redirectTo);
           }
+        } else {
+          console.error("Failed to get user data:", result.error);
         }
       } else {
         setUser(null);
