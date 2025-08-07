@@ -391,7 +391,7 @@ export default function StudentJoinPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-white font-medium mb-1">Ready to Join?</h3>
-                <p className="text-gray-400 text-sm">You'll be able to track attendance and access class materials.</p>
+                <p className="text-gray-400 text-sm">You&apos;ll be able to track attendance and access class materials.</p>
               </div>
               <div className="flex space-x-3">
                 <motion.button
