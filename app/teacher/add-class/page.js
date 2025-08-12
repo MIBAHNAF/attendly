@@ -3,6 +3,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, X, Calendar, Clock, Users, BookOpen, Hash, Type, MapPin } from "lucide-react";
+import { createClass } from "@/lib/teacherService";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Add Class Page Component
@@ -10,21 +12,27 @@ import { ArrowLeft, Save, X, Calendar, Clock, Users, BookOpen, Hash, Type, MapPi
  */
 export default function AddClassPage() {
   const router = useRouter();
+  const { user, userData, loading } = useAuth();
+  
   const [formData, setFormData] = useState({
     classNumber: '',
     className: '',
     maxStudents: '',
     classType: 'Lecture',
+    subject: '',
     section: '',
+    room: '',
+    description: '',
+    schedule: [], // Array of { day, startTime, endTime }
     days: [],
     startDate: '',
     endDate: '',
     startTime: '',
-    duration: '',
-    room: ''
+    endTime: ''
   });
   
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const classTypes = ['Lecture', 'Lab', 'Seminar', 'Workshop', 'Tutorial'];
   const daysOfWeek = [
@@ -53,62 +61,84 @@ export default function AddClassPage() {
     }));
   };
 
-  const handleSave = () => {
+  // Generate schedule array based on selected days and times
+  const generateSchedule = () => {
+    const schedule = [];
+    formData.days.forEach(day => {
+      if (formData.startTime && formData.endTime) {
+        schedule.push({
+          day: day,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          time: formData.startTime // For grid display compatibility
+        });
+      }
+    });
+    return schedule;
+  };
+
+  const handleSave = async () => {
     // Validate required fields
-    const requiredFields = ['classNumber', 'className', 'maxStudents', 'section', 'startDate', 'endDate', 'startTime'];
-    const missingFields = requiredFields.filter(field => !formData[field]);
-    
-    if (missingFields.length > 0) {
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+    if (!formData.className || !formData.classType || !formData.section) {
+      setSaveError('Please fill in all required fields: Class Name, Class Type, and Section');
       return;
     }
-    
+
     if (formData.days.length === 0) {
-      alert('Please select at least one day of the week');
+      setSaveError('Please select at least one day of the week');
+      return;
+    }
+
+    if (!formData.startTime || !formData.endTime) {
+      setSaveError('Please provide start and end times');
+      return;
+    }
+
+    if (!user || !user.uid) {
+      setSaveError('You must be signed in to create a class');
       return;
     }
 
     setIsSaving(true);
+    setSaveError('');
 
-    // Format the days for display
-    const dayNames = {
-      monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', 
-      thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun'
-    };
-    const selectedDays = formData.days.map(day => dayNames[day]).join(', ');
-    
-    // Create the new class object
-    const newClass = {
-      id: Date.now(),
-      name: formData.className,
-      code: formData.classNumber,
-      section: formData.section,
-      classType: formData.classType,
-      maxStudents: parseInt(formData.maxStudents),
-      enrolledStudents: 0,
-      schedule: `${selectedDays} - ${formData.startTime}`,
-      room: formData.room || 'TBD',
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      duration: formData.duration,
-      days: formData.days,
-      invitationLink: ''
-    };
+    try {
+      // Generate schedule from selected days and times
+      const generatedSchedule = generateSchedule();
+      
+      // Create class data for backend
+      const classData = {
+        teacherId: user.uid,
+        classNumber: formData.classNumber,
+        className: formData.className,
+        subject: formData.classType, // Map classType to subject for backend compatibility
+        section: formData.section,
+        room: formData.room,
+        description: formData.description || `${formData.classType} class for ${formData.className}`,
+        maxStudents: parseInt(formData.maxStudents) || 30,
+        schedule: generatedSchedule,
+        days: formData.days,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        startTime: formData.startTime,
+        endTime: formData.endTime
+      };
 
-    // Save to localStorage for now (later will be replaced with API call)
-    const existingClasses = JSON.parse(localStorage.getItem('teacherClasses') || '[]');
-    existingClasses.push(newClass);
-    localStorage.setItem('teacherClasses', JSON.stringify(existingClasses));
-
-    // TODO: Replace with actual API call
-    console.log('Saving class:', newClass);
-    
-    // Simulate saving delay
-    setTimeout(() => {
+      // Call backend API to create the class
+      const result = await createClass(classData);
+      
+      if (result.success) {
+        // Redirect to teacher dashboard with success indicator
+        router.push('/teacher/dashboard?newClass=true');
+      } else {
+        setSaveError(result.error || 'Failed to create class. Please try again.');
+      }
+    } catch (error) {
+      setSaveError('An error occurred while creating the class.');
+      console.error('Create class error:', error);
+    } finally {
       setIsSaving(false);
-      // Navigate back to dashboard
-      router.push('/teacher/dashboard?newClass=true');
-    }, 1500);
+    }
   };
 
   const handleCancel = () => {
@@ -172,6 +202,17 @@ export default function AddClassPage() {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Display */}
+        {saveError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg"
+          >
+            <p className="text-red-400 text-sm font-medium">{saveError}</p>
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -284,6 +325,21 @@ export default function AddClassPage() {
 
             </div>
 
+            {/* Description */}
+            <div className="mt-6">
+              <label className="flex items-center space-x-2 text-white font-medium mb-3">
+                <Type size={16} className="text-orange-400" />
+                <span>Description (Optional)</span>
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Brief description of the class content and objectives..."
+                rows="3"
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-orange-500 focus:outline-none transition-colors resize-vertical"
+              />
+            </div>
+
             {/* Days of Week */}
             <div className="mt-6">
               <label className="flex items-center space-x-2 text-white font-medium mb-3">
@@ -353,14 +409,13 @@ export default function AddClassPage() {
               <div>
                 <label className="flex items-center space-x-2 text-white font-medium mb-3">
                   <Clock size={16} className="text-orange-400" />
-                  <span>Duration</span>
+                  <span>End Time *</span>
                 </label>
                 <input
-                  type="text"
-                  value={formData.duration}
-                  onChange={(e) => handleInputChange('duration', e.target.value)}
-                  placeholder="e.g., 90 minutes, 1.5 hours"
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-orange-500 focus:outline-none transition-colors"
+                  type="time"
+                  value={formData.endTime}
+                  onChange={(e) => handleInputChange('endTime', e.target.value)}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:border-orange-500 focus:outline-none transition-colors"
                 />
               </div>
             </div>

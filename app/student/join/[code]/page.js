@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, BookOpen, Users, Calendar, Clock, Check, X, MapPin } from "lucide-react";
+import { lookupClassByCode } from "@/lib/teacherService";
+import { joinClassByCode } from "@/lib/studentService";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Student Join Class Page Component
@@ -11,6 +14,8 @@ import { ArrowLeft, BookOpen, Users, Calendar, Clock, Check, X, MapPin } from "l
 export default function StudentJoinPage() {
   const router = useRouter();
   const params = useParams();
+  const { user, userData, loading: authLoading } = useAuth();
+  
   // Handle URL decoding more robustly
   const [classCode] = useState(() => {
     try {
@@ -25,123 +30,33 @@ export default function StudentJoinPage() {
       return params.code || '';
     }
   });
+  
   const [isLoading, setIsLoading] = useState(true);
   const [classDetails, setClassDetails] = useState(null);
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
+  const [joinSuccess, setJoinSuccess] = useState(false);
 
   useEffect(() => {
-    // Fetch class details from the invitation code
+    // Fetch class details from the backend API
     const fetchClassDetails = async () => {
       setIsLoading(true);
       console.log('Fetching class details for code:', classCode);
-      console.log('Raw params.code:', params.code);
       
       try {
-        // Get invitation data from localStorage
-        const invitationData = JSON.parse(localStorage.getItem('classInvitations') || '{}');
-        console.log('All invitation data:', invitationData);
-        console.log('Available codes:', Object.keys(invitationData));
+        // Use the backend API to lookup class details
+        const result = await lookupClassByCode(classCode);
         
-        // Multiple strategies to find the invitation
-        let invitation = null;
-        let foundCode = null;
-        
-        // Strategy 1: Direct match with the decoded code
-        invitation = invitationData[classCode];
-        if (invitation) {
-          foundCode = classCode;
-          console.log('Found with direct match:', foundCode);
+        if (result.success) {
+          setClassDetails(result.class);
+          console.log('Found class:', result.class);
+        } else {
+          setJoinError(result.error || 'Class not found. Please check the invitation code.');
+          console.error('Failed to find class:', result.error);
         }
-        
-        // Strategy 2: Try the raw encoded version
-        if (!invitation && params.code !== classCode) {
-          invitation = invitationData[params.code];
-          if (invitation) {
-            foundCode = params.code;
-            console.log('Found with raw encoded code:', foundCode);
-          }
-        }
-        
-        // Strategy 3: Try with spaces removed (new sanitized format)
-        if (!invitation) {
-          const sanitizedCode = classCode.replace(/\s+/g, '').replace(/[^a-zA-Z0-9-]/g, '');
-          console.log('Trying sanitized code:', sanitizedCode);
-          invitation = invitationData[sanitizedCode];
-          if (invitation) {
-            foundCode = sanitizedCode;
-            console.log('Found with sanitized code:', foundCode);
-          }
-        }
-        
-        // Strategy 4: Try to match by class prefix (fuzzy matching)
-        if (!invitation) {
-          const classPrefix = classCode.split('-')[0].replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
-          foundCode = Object.keys(invitationData).find(code => {
-            const data = invitationData[code];
-            const codePrefix = code.split('-')[0].replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
-            return data && data.classData && codePrefix === classPrefix;
-          });
-          
-          if (foundCode) {
-            invitation = invitationData[foundCode];
-            console.log('Found with fuzzy matching:', foundCode);
-          }
-        }
-        
-        // Strategy 5: Try to match by original class code in the data
-        if (!invitation) {
-          foundCode = Object.keys(invitationData).find(code => {
-            const data = invitationData[code];
-            if (!data || !data.classData) return false;
-            
-            const originalCode = data.classData.code;
-            return originalCode === classCode.split('-')[0] || 
-                   originalCode.replace(/\s+/g, '') === classCode.split('-')[0].replace(/\s+/g, '');
-          });
-          
-          if (foundCode) {
-            invitation = invitationData[foundCode];
-            console.log('Found by matching original class code:', foundCode);
-          }
-        }
-        
-        console.log('Final invitation found:', invitation);
-        
-        if (!invitation) {
-          throw new Error(`Invalid or expired invitation code: ${classCode}`);
-        }
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Use the actual class data from the invitation
-        const classData = invitation.classData;
-        
-        // Format the class details for display
-        const formattedClassDetails = {
-          id: classData.id,
-          name: classData.name,
-          code: classData.code,
-          section: classData.section,
-          teacherName: "Dr. Teacher", // TODO: Get from actual teacher data
-          teacherEmail: "teacher@university.edu", // TODO: Get from actual teacher data
-          schedule: classData.schedule,
-          room: classData.room || 'TBD',
-          startDate: classData.startDate,
-          endDate: classData.endDate,
-          maxStudents: classData.maxStudents,
-          enrolledStudents: classData.enrolledStudents || 0,
-          classType: classData.classType,
-          description: `${classData.classType} course for ${classData.name}. Duration: ${classData.duration}.`,
-          originalData: classData // Keep original data for joining
-        };
-        
-        console.log('Formatted class details:', formattedClassDetails);
-        setClassDetails(formattedClassDetails);
       } catch (error) {
+        setJoinError('Unable to verify class invitation. Please try again.');
         console.error('Error fetching class details:', error);
-        setJoinError(error.message || 'Invalid or expired invitation link');
       } finally {
         setIsLoading(false);
       }
@@ -150,284 +65,218 @@ export default function StudentJoinPage() {
     if (classCode) {
       fetchClassDetails();
     } else {
-      setJoinError('No class code provided');
+      setJoinError('Invalid invitation code.');
       setIsLoading(false);
     }
-  }, [classCode, params.code]);
+  }, [classCode]);
 
+  // Handle joining the class
   const handleJoinClass = async () => {
+    if (!user || !user.uid) {
+      setJoinError('You must be signed in to join a class.');
+      return;
+    }
+
     setIsJoining(true);
+    setJoinError('');
+
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Use the backend API to join the class
+      const result = await joinClassByCode(user.uid, classCode);
       
-      // Add class to student's enrolled classes
-      const studentClass = {
-        id: classDetails.id,
-        name: classDetails.name,
-        code: classDetails.code,
-        section: classDetails.section,
-        teacherName: classDetails.teacherName,
-        schedule: classDetails.schedule,
-        room: classDetails.room,
-        attendance: {
-          present: 0,
-          total: 0,
-          percentage: 0
-        }
-      };
-      
-      // Get existing enrolled classes
-      const existingClasses = JSON.parse(localStorage.getItem('studentClasses') || '[]');
-      
-      // Check if already enrolled
-      const alreadyEnrolled = existingClasses.find(cls => cls.id === classDetails.id);
-      if (alreadyEnrolled) {
-        setJoinError('You are already enrolled in this class');
-        setIsJoining(false);
-        return;
+      if (result.success) {
+        setJoinSuccess(true);
+        // Redirect to student dashboard after successful join
+        setTimeout(() => {
+          router.push('/student/dashboard?joined=true');
+        }, 2000);
+      } else {
+        setJoinError(result.error || 'Failed to join class. Please try again.');
       }
-      
-      // Add new class
-      existingClasses.push(studentClass);
-      localStorage.setItem('studentClasses', JSON.stringify(existingClasses));
-      
-      // Update teacher's class enrollment count
-      const teacherClasses = JSON.parse(localStorage.getItem('teacherClasses') || '[]');
-      const updatedTeacherClasses = teacherClasses.map(cls => 
-        cls.id === classDetails.id 
-          ? { ...cls, enrolledStudents: (cls.enrolledStudents || 0) + 1 }
-          : cls
-      );
-      localStorage.setItem('teacherClasses', JSON.stringify(updatedTeacherClasses));
-      
-      console.log('Successfully joined class:', studentClass);
-      
-      // Navigate to student dashboard
-      router.push('/student/dashboard?joined=true');
     } catch (error) {
-      console.error('Error joining class:', error);
-      setJoinError('Failed to join class. Please try again.');
+      setJoinError('An error occurred while joining the class.');
+      console.error('Join class error:', error);
     } finally {
       setIsJoining(false);
     }
   };
 
   const handleGoBack = () => {
-    router.push('/student/dashboard');
+    router.back();
   };
 
-  if (isLoading) {
+  // Show auth loading state
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-8 text-center"
-        >
-          <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            >
-              <BookOpen className="text-orange-400" size={24} />
-            </motion.div>
-          </div>
-          <h3 className="text-white text-lg font-medium mb-2">Loading Class Details...</h3>
-          <p className="text-gray-400">Please wait while we fetch the class information</p>
-        </motion.div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  if (joinError || !classDetails) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-gray-800/50 backdrop-blur-sm border border-red-500/50 rounded-xl p-8 text-center max-w-md mx-4"
-        >
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <X className="text-red-400" size={24} />
-          </div>
-          <h3 className="text-white text-lg font-medium mb-2">Unable to Load Class</h3>
-          <p className="text-gray-400 mb-6">{joinError}</p>
-          <motion.button
-            onClick={handleGoBack}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center space-x-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 mx-auto"
-          >
-            <ArrowLeft size={20} />
-            <span>Back to Dashboard</span>
-          </motion.button>
-        </motion.div>
-      </div>
-    );
+  // Redirect if not signed in
+  if (!user) {
+    router.push('/auth?redirect=' + encodeURIComponent(window.location.pathname));
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Header */}
-      <div className="bg-gray-900/50 backdrop-blur-sm border-b border-gray-800">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <motion.button
-              onClick={handleGoBack}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft size={20} />
-              <span>Back to Dashboard</span>
-            </motion.button>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl">
+        {/* Back Button */}
+        <motion.button
+          onClick={handleGoBack}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center space-x-2 text-gray-400 hover:text-white mb-6 transition-colors duration-200"
+        >
+          <ArrowLeft size={20} />
+          <span>Back</span>
+        </motion.button>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="space-y-8"
+          className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-8"
         >
-          {/* Page Title */}
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-white mb-2">Join Class</h1>
-            <p className="text-gray-400">Review the class details and confirm to join</p>
-          </div>
-
-          {/* Class Details Card */}
-          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-8">
-            <div className="flex items-start space-x-6">
-              <div className="w-20 h-20 bg-orange-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <BookOpen className="text-orange-400" size={32} />
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+              <h2 className="text-2xl font-bold text-white mb-2">Verifying Invitation</h2>
+              <p className="text-gray-400">Please wait while we verify your class invitation...</p>
+            </div>
+          ) : joinError ? (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <X className="text-red-400" size={32} />
               </div>
-              
-              <div className="flex-1 space-y-6">
-                {/* Class Header */}
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">{classDetails.name}</h2>
-                  <div className="flex items-center space-x-4 text-sm">
-                    <span className="text-orange-400 font-medium">{classDetails.code}</span>
-                    <span className="text-gray-400">•</span>
-                    <span className="text-gray-300">Section {classDetails.section}</span>
-                    <span className="text-gray-400">•</span>
-                    <span className="text-gray-300">{classDetails.classType}</span>
+              <h2 className="text-2xl font-bold text-white mb-2">Invalid Invitation</h2>
+              <p className="text-gray-400 mb-6">{joinError}</p>
+              <motion.button
+                onClick={handleGoBack}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+              >
+                Go Back
+              </motion.button>
+            </div>
+          ) : joinSuccess ? (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Check className="text-green-400" size={32} />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Successfully Joined!</h2>
+              <p className="text-gray-400 mb-6">You have been enrolled in {classDetails?.className}. Redirecting to your dashboard...</p>
+              <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            </div>
+          ) : classDetails ? (
+            <div>
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <BookOpen className="text-orange-400" size={32} />
+                </div>
+                <h1 className="text-3xl font-bold text-white mb-2">Join Class</h1>
+                <p className="text-gray-400">You&apos;ve been invited to join this class</p>
+              </div>
+
+              <div className="bg-gray-700/30 rounded-lg p-6 mb-8">
+                <h2 className="text-xl font-semibold text-white mb-4">{classDetails.className}</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-3">
+                    <BookOpen className="text-orange-400" size={20} />
+                    <div>
+                      <p className="text-sm text-gray-400">Subject</p>
+                      <p className="text-white font-medium">{classDetails.subject}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <Users className="text-orange-400" size={20} />
+                    <div>
+                      <p className="text-sm text-gray-400">Section</p>
+                      <p className="text-white font-medium">{classDetails.section}</p>
+                    </div>
+                  </div>
+                  
+                  {classDetails.room && (
+                    <div className="flex items-center space-x-3">
+                      <MapPin className="text-orange-400" size={20} />
+                      <div>
+                        <p className="text-sm text-gray-400">Room</p>
+                        <p className="text-white font-medium">{classDetails.room}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center space-x-3">
+                    <Users className="text-orange-400" size={20} />
+                    <div>
+                      <p className="text-sm text-gray-400">Students</p>
+                      <p className="text-white font-medium">{classDetails.studentCount} enrolled</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Class Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <Users className="text-orange-400" size={16} />
-                      <div>
-                        <p className="text-white font-medium">Teacher</p>
-                        <p className="text-gray-400 text-sm">{classDetails.teacherName}</p>
-                        <p className="text-gray-500 text-xs">{classDetails.teacherEmail}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-3">
-                      <Calendar className="text-orange-400" size={16} />
-                      <div>
-                        <p className="text-white font-medium">Schedule</p>
-                        <p className="text-gray-400 text-sm">{classDetails.schedule}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <MapPin className="text-orange-400" size={16} />
-                      <div>
-                        <p className="text-white font-medium">Location</p>
-                        <p className="text-gray-400 text-sm">{classDetails.room}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-3">
-                      <Users className="text-orange-400" size={16} />
-                      <div>
-                        <p className="text-white font-medium">Enrollment</p>
-                        <p className="text-gray-400 text-sm">
-                          {classDetails.enrolledStudents}/{classDetails.maxStudents} students
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Description */}
                 {classDetails.description && (
-                  <div>
-                    <h3 className="text-white font-medium mb-2">Course Description</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">{classDetails.description}</p>
+                  <div className="mt-4 pt-4 border-t border-gray-600">
+                    <p className="text-sm text-gray-400 mb-2">Description</p>
+                    <p className="text-gray-300">{classDetails.description}</p>
                   </div>
                 )}
-
-                {/* Duration */}
-                <div className="bg-gray-700/30 rounded-lg p-4">
-                  <div className="flex items-center space-x-3">
-                    <Clock className="text-orange-400" size={16} />
-                    <div>
-                      <p className="text-white font-medium">Course Duration</p>
-                      <p className="text-gray-400 text-sm">
-                        {new Date(classDetails.startDate).toLocaleDateString()} - {new Date(classDetails.endDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Join Actions */}
-          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-white font-medium mb-1">Ready to Join?</h3>
-                <p className="text-gray-400 text-sm">You&apos;ll be able to track attendance and access class materials.</p>
-              </div>
-              <div className="flex space-x-3">
+              <div className="flex space-x-4">
                 <motion.button
                   onClick={handleGoBack}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-medium transition-colors duration-200"
+                  disabled={isJoining}
                 >
                   Cancel
                 </motion.button>
+                
                 <motion.button
                   onClick={handleJoinClass}
-                  disabled={isJoining}
                   whileHover={{ scale: isJoining ? 1 : 1.05 }}
                   whileTap={{ scale: isJoining ? 1 : 0.95 }}
-                  className="flex items-center space-x-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50"
+                  disabled={isJoining}
                 >
                   {isJoining ? (
-                    <>
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                      />
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span>Joining...</span>
-                    </>
+                    </div>
                   ) : (
-                    <>
-                      <Check size={20} />
-                      <span>Join Class</span>
-                    </>
+                    'Join Class'
                   )}
                 </motion.button>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <BookOpen className="text-gray-400" size={32} />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Something went wrong</h2>
+              <p className="text-gray-400 mb-6">Unable to load class information.</p>
+              <motion.button
+                onClick={handleGoBack}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+              >
+                Go Back
+              </motion.button>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>
