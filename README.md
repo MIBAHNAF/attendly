@@ -1,27 +1,59 @@
-# Attendly - Scalable Attendance Management System
+# Attendly - NFC Attendance Management System
 
-> "Google Classroom meets Modern Attendance Tracking" for Everyone
+> "Google Classroom meets Modern NFC Attendance Tracking" - Complete attendance solution with real-time check-ins
 
-Attendly is a comprehensive attendance management platform that provides seamless classroom management with modern web technologies, designed to be scalable and deployable for anyone to use.
+Attendly is a comprehensive NFC-powered attendance management platform that provides seamless classroom management with modern web technologies, designed to be scalable and deployable for educational institutions worldwide.
 
-## 🚀 Features
+## 🚀 Key Features
 
-- **Dual Portal System**: Separate dashboards for teachers and students
-- **Google Authentication**: Secure login with Google accounts
-- **Real-time Updates**: Live attendance tracking with Firestore
-- **Profile Management**: Complete user profiles with Google integration
-- **Class Management**: Create, edit, and delete classes with ease
-- **Responsive Design**: Works perfectly on desktop and mobile devices
-- **Scalable Architecture**: Ready for deployment on Vercel with multi-user support
+- **🏷️ NFC Check-in System**: Students tap their phone to NFC tags for instant attendance marking
+- **👨‍🏫 Teacher Dashboard**: Complete class management with real-time attendance monitoring
+- **👨‍🎓 Student Portal**: Class enrollment and attendance history tracking
+- **🔗 Smart Link Generation**: Automatic NFC check-in link creation for each class
+- **📱 Cross-Device Compatibility**: Works on any smartphone with NFC or direct link access
+- **🔐 Secure Authentication**: Firebase Auth with Google OAuth integration
+- **⚡ Real-time Updates**: Live attendance tracking with Firestore
+- **📊 Attendance Analytics**: Comprehensive attendance monitoring and reporting
+- **🌐 Responsive Design**: Works perfectly on desktop and mobile devices
 
-## 🛠️ Tech Stack
+## 🎯 How It Works
 
-- **Frontend**: Next.js 15 with App Router, React, Tailwind CSS
-- **Backend**: Next.js API Routes, Firebase Admin SDK
-- **Database**: Firestore (NoSQL)
-- **Authentication**: Firebase Auth with Google Provider
-- **Hosting**: Vercel (recommended)
-- **Deployment**: GitHub + Vercel integration
+### For Teachers:
+1. **Create Classes** → Add students via invitation links
+2. **Generate NFC Links** → Copy check-in links for each class  
+3. **Program NFC Tags** → Write links to physical NFC tags
+4. **Monitor Attendance** → Real-time dashboard shows student check-ins
+
+### For Students:
+1. **Join Classes** → Use teacher's invitation link to enroll
+2. **NFC Check-in** → Tap phone to NFC tag for instant attendance
+3. **Alternative Access** → Direct link access if no NFC available
+4. **View History** → Track attendance records in student dashboard
+
+### Real-Time Flow:
+```
+Student taps NFC tag → Opens check-in link → Auto-login verification → 
+Attendance marked → Teacher dashboard updates → Complete!
+```
+
+## 🏷️ NFC Integration
+
+### **Supported NFC Tags:**
+- NTAG213, NTAG215, NTAG216 (recommended)
+- Any programmable NFC tag with URL record support
+
+### **Programming NFC Tags:**
+1. Copy NFC check-in link from teacher dashboard
+2. Use NFC writing apps:
+   - **Android**: NFC Tools, TagInfo, Trigger
+   - **iPhone**: NFC TagInfo, Shortcuts app
+3. Write URL record to tag
+4. Place in classroom for student access
+
+### **Cross-Platform Support:**
+- **NFC Enabled**: Direct tap-to-attend functionality
+- **Non-NFC Devices**: QR codes or direct link sharing
+- **All Smartphones**: Compatible with iOS and Android browsers
 
 ## 📋 Prerequisites
 

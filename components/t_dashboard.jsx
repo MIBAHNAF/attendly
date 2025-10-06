@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Calendar, BookOpen, HelpCircle, Users, Clock, Settings, LogOut, Link2, Copy, CheckCircle, Edit3, Trash2, X, UserMinus, AlertTriangle, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { signOutUser } from "@/lib/auth";
-import { getTeacherClasses, generateInvitationLink, copyInvitationLink, updateClass, deleteClass, removeStudentFromClass } from "@/lib/teacherService";
+import { getTeacherClasses, generateInvitationLink, copyInvitationLink, updateClass, deleteClass, removeStudentFromClass, copyNFCCheckInLink } from "@/lib/teacherService";
 import { getUserProfiles, getUserProfile } from "@/lib/userService";
 import { getInitials, getDisplayName, getProfilePicture } from "@/lib/profileUtils";
 import ProfileSettings from "@/components/ProfileSettings";
@@ -35,7 +35,9 @@ export default function TeacherDashboard() {
   const [userProfile, setUserProfile] = useState(null);
   const [classes, setClasses] = useState([]);
   const [copiedLink, setCopiedLink] = useState('');
+  const [copiedNFCLink, setCopiedNFCLink] = useState('');
   const [loadingClasses, setLoadingClasses] = useState(false);
+  const [loadingStudentProfiles, setLoadingStudentProfiles] = useState(false);
   
   // Class management states
   const [showManageModal, setShowManageModal] = useState(false);
@@ -110,8 +112,47 @@ export default function TeacherDashboard() {
     loadUserProfile();
   }, [user]);
 
+  // Load student profiles when on attendance tab
+  useEffect(() => {
+    const loadAllStudentProfiles = async () => {
+      if (activeTab === 'attendance' && classes.length > 0) {
+        try {
+          setLoadingStudentProfiles(true);
+          
+          // Collect all unique student IDs from all classes
+          const allStudentIds = new Set();
+          classes.forEach(classItem => {
+            if (classItem.students && classItem.students.length > 0) {
+              classItem.students.forEach(studentId => {
+                allStudentIds.add(studentId);
+              });
+            }
+          });
+
+          if (allStudentIds.size > 0) {
+            const result = await getUserProfiles(Array.from(allStudentIds));
+            if (result.success) {
+              const profilesMap = {};
+              result.profiles.forEach(profile => {
+                profilesMap[profile.id] = profile;
+              });
+              setStudentProfiles(profilesMap);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading student profiles for attendance:', error);
+        } finally {
+          setLoadingStudentProfiles(false);
+        }
+      }
+    };
+
+    loadAllStudentProfiles();
+  }, [activeTab, classes]);
+
   const tabs = [
     { id: "classes", label: "Classes", icon: BookOpen },
+    { id: "attendance", label: "Attendance", icon: Users },
     { id: "schedule", label: "Schedule", icon: Calendar },
     { id: "howto", label: "How To", icon: HelpCircle }
   ];
@@ -146,6 +187,21 @@ export default function TeacherDashboard() {
       }
     } catch (error) {
       console.error('Error copying invitation link:', error);
+    }
+  };
+
+  // Handle copying NFC check-in link to clipboard
+  const handleCopyNFCLink = async (classItem) => {
+    try {
+      const success = await copyNFCCheckInLink(classItem);
+      if (success) {
+        setCopiedNFCLink(classItem.id);
+        setTimeout(() => setCopiedNFCLink(''), 2000);
+      } else {
+        console.error('Failed to copy NFC link');
+      }
+    } catch (error) {
+      console.error('Error copying NFC link:', error);
     }
   };
 
@@ -214,7 +270,6 @@ export default function TeacherDashboard() {
         setShowEditModal(false);
         setSelectedClass(null);
         setEditFormData({});
-        console.log('Class updated successfully');
       } else {
         console.error('Failed to update class:', result.error);
         alert(`Failed to update class: ${result.error}`);
@@ -237,7 +292,6 @@ export default function TeacherDashboard() {
         setClasses(updatedClasses);
         setShowDeleteModal(false);
         setSelectedClass(null);
-        console.log('Class deleted successfully');
       } else {
         console.error('Failed to delete class:', result.error);
         alert(`Failed to delete class: ${result.error}`);
@@ -275,7 +329,6 @@ export default function TeacherDashboard() {
           ...selectedClass,
           students: selectedClass.students.filter(id => id !== studentId)
         });
-        console.log('Student removed successfully');
       } else {
         console.error('Failed to remove student:', result.error);
         alert(`Failed to remove student: ${result.error}`);
@@ -439,6 +492,198 @@ export default function TeacherDashboard() {
       </div>
     </div>
   );
+
+  const renderAttendance = () => {
+    // Get today's date
+    const today = new Date().toISOString().split('T')[0];
+    
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">Attendance Tracking</h2>
+            <p className="text-gray-400">Monitor student attendance for today: {new Date().toLocaleDateString()}</p>
+          </div>
+        </div>
+
+        {/* Classes with Attendance */}
+        <div className="space-y-6">
+          {loadingClasses ? (
+            /* Loading State */
+            <div className="bg-gray-800/30 backdrop-blur-sm border border-gray-700 rounded-xl p-12 text-center">
+              <div className="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                >
+                  <Settings className="text-orange-400" size={32} />
+                </motion.div>
+              </div>
+              <h3 className="text-white text-xl font-semibold mb-3">Loading Attendance Data</h3>
+              <p className="text-gray-400">Please wait while we fetch attendance information...</p>
+            </div>
+          ) : classes.length === 0 ? (
+            /* Empty State */
+            <div className="bg-gray-800/30 backdrop-blur-sm border border-gray-700 rounded-xl p-12 text-center">
+              <div className="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Users className="text-orange-400" size={32} />
+              </div>
+              <h3 className="text-white text-xl font-semibold mb-3">No Classes Available</h3>
+              <p className="text-gray-400 mb-6">Create classes first to start tracking attendance.</p>
+              <motion.button
+                onClick={() => setActiveTab("classes")}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center space-x-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 mx-auto"
+              >
+                <BookOpen size={20} />
+                <span>Go to Classes</span>
+              </motion.button>
+            </div>
+          ) : (
+            /* Attendance Cards for Each Class */
+            classes.map((classItem, index) => (
+              <motion.div
+                key={classItem.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="bg-gray-800/30 backdrop-blur-sm border border-gray-700 rounded-xl p-6"
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                      <BookOpen className="text-orange-400" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-white text-lg font-semibold">{classItem.className}</h3>
+                      <p className="text-gray-400 text-sm">
+                        {classItem.subject} • Section {classItem.section}
+                      </p>
+                      <p className="text-gray-500 text-xs">
+                        {classItem.students?.length || 0} students enrolled
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <p className="text-green-400 text-sm font-medium">
+                      NFC Link: {classItem.inviteCode ? 'Active' : 'Not Set'}
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      Tap to mark present
+                    </p>
+                  </div>
+                </div>
+
+                {/* Student Attendance List */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-white font-medium">Student Attendance</h4>
+                    <div className="flex space-x-4 text-xs">
+                      <span className="text-green-400">Present: 0</span>
+                      <span className="text-red-400">Absent: {classItem.students?.length || 0}</span>
+                    </div>
+                  </div>
+                  
+                  {classItem.students && classItem.students.length > 0 ? (
+                    <div className="space-y-2">
+                      {classItem.students.map((studentId, studentIndex) => {
+                        const studentProfile = studentProfiles?.[studentId];
+                        const isLoadingProfile = loadingStudentProfiles && !studentProfile;
+                        
+                        return (
+                          <div key={studentId} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
+                                {isLoadingProfile ? (
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                  >
+                                    <User className="text-red-400" size={16} />
+                                  </motion.div>
+                                ) : (
+                                  <User className="text-red-400" size={16} />
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-white text-sm font-medium">
+                                  {isLoadingProfile ? (
+                                    <span className="text-gray-400">Loading profile...</span>
+                                  ) : (
+                                    getDisplayName(null, null, studentProfile) || 
+                                    (studentProfile?.firstName && studentProfile?.lastName ? 
+                                      `${studentProfile.firstName} ${studentProfile.lastName}` :
+                                      studentProfile?.firstName || 
+                                      `Student ${studentIndex + 1}`
+                                    )
+                                  )}
+                                </p>
+                                <p className="text-gray-400 text-xs">
+                                  {studentProfile?.studentId ? 
+                                    `ID: ${studentProfile.studentId}` : 
+                                    `${studentId.substring(0, 8)}...`
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs font-medium">
+                                Absent
+                              </span>
+                              <span className="text-gray-500 text-xs">
+                                --:--
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <Users className="text-gray-400 mx-auto mb-2" size={24} />
+                      <p className="text-gray-400 text-sm">No students enrolled in this class</p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* NFC Link Section */}
+                <div className="mt-6 pt-6 border-t border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white text-sm font-medium">NFC Attendance Link</p>
+                      <p className="text-gray-400 text-xs">Students tap their device to NFC tag to mark attendance</p>
+                    </div>
+                    <motion.button
+                      onClick={() => handleCopyNFCLink(classItem)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
+                    >
+                      {copiedNFCLink === classItem.id ? (
+                        <>
+                          <CheckCircle size={16} />
+                          <span>NFC Link Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Link2 size={16} />
+                          <span>Copy NFC Link</span>
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderSchedule = () => {
     // Create a time grid structure
@@ -708,6 +953,7 @@ export default function TeacherDashboard() {
           transition={{ duration: 0.3 }}
         >
           {activeTab === "classes" && renderClasses()}
+          {activeTab === "attendance" && renderAttendance()}
           {activeTab === "schedule" && renderSchedule()}
           {activeTab === "howto" && renderHowTo()}
         </motion.div>
