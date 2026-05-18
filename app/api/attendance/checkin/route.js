@@ -31,8 +31,15 @@ export async function POST(request) {
     
     if (!finalClassId && classCode) {
       const classesRef = collection(db, 'classes');
-      const classQuery = query(classesRef, where('inviteCode', '==', classCode));
-      const classSnapshot = await getDocs(classQuery);
+      // Try to find class by classCode first, then fall back to inviteCode for backwards compatibility
+      let classQuery = query(classesRef, where('classCode', '==', classCode));
+      let classSnapshot = await getDocs(classQuery);
+      
+      // If not found by classCode, try inviteCode for backwards compatibility
+      if (classSnapshot.empty) {
+        classQuery = query(classesRef, where('inviteCode', '==', classCode));
+        classSnapshot = await getDocs(classQuery);
+      }
       
       if (classSnapshot.empty) {
         return NextResponse.json(
