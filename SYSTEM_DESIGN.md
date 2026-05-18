@@ -1,469 +1,275 @@
-# Attendly - NFC Attendance System Design
+# Attendly System Design
 
-## Table of Contents
-- [System Overview](#system-overview)
-- [Requirements](#requirements)
-- [High-Level Architecture](#high-level-architecture)
-- [Current Implementation Status](#current-implementation-status)
-- [Database Design](#database-design)
-- [API Design](#api-design)
-- [Security Considerations](#security-considerations)
-- [Scalability & Performance](#scalability--performance)
-- [Technology Stack](#technology-stack)
-- [Development Phases](#development-phases)
+Attendly is a Next.js and Firebase application for NFC-assisted attendance. The system uses programmable NFC tags as physical entry points into a web-based check-in flow. Authentication, class membership, attendance validation, and record storage are handled by the web application and Firestore.
 
-## System Overview
+## Design Summary
 
-**Attendly** is an NFC-powered attendance tracking system designed to modernize classroom management. The system allows teachers to create classes, manage students, and track attendance through simple NFC tap interactions.
+Attendly separates physical check-in from identity verification. The NFC tag stores a class-specific URL. The student's phone opens the URL, and the application uses the signed-in student account to determine whether attendance should be recorded.
 
-### Key Features
-- 📱 NFC-based attendance check-in
-- 👨‍🏫 Teacher dashboard for class management
-- 👨‍🎓 Student portal for attendance history
-- 📊 Real-time attendance reporting
-- 🔐 Secure authentication system
+This avoids storing private student credentials on NFC tags and keeps attendance decisions in the server-side API.
 
-## Requirements
-
-### Functional Requirements
-1. **User Management**
-   - Teacher registration and authentication
-   - Student registration and authentication
-   - Role-based access control
-
-2. **Class Management**
-   - Create, read, update, delete classes
-   - Add/remove students from classes
-   - Class scheduling
-
-3. **Attendance Tracking**
-   - NFC-based check-in system
-   - Real-time attendance recording
-   - Attendance history and reports
-
-4. **Dashboard & Analytics**
-   - Teacher dashboard with class overview
-   - Student dashboard with attendance history
-   - Attendance analytics and insights
-
-### Non-Functional Requirements
-1. **Performance**
-   - Page load time < 2 seconds
-   - NFC check-in response time < 1 second
-   - Support 1000+ concurrent users
-
-2. **Reliability**
-   - 99.9% uptime
-   - Data backup and recovery
-   - Graceful error handling
-
-3. **Security**
-   - Encrypted data transmission
-   - Secure authentication (Firebase Auth)
-   - Input validation and sanitization
-
-4. **Scalability**
-   - Horizontal scaling capability
-   - Database optimization for large datasets
-   - CDN for static assets
-
-## High-Level Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Client (Web)  │────│   Load Balancer │────│   Next.js App  │
-│                 │    │                 │    │    (Frontend)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                        │
-                                                        │
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   NFC Reader    │────│   API Gateway   │────│   API Routes    │
-│                 │    │                 │    │   (Backend)     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                        │
-                                                        │
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Firebase Auth │────│   Middleware    │────│   Database      │
-│                 │    │                 │    │   (Firebase)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+```text
+NFC tag or direct link
+  -> /checkin/[classCode]
+  -> authenticated student session
+  -> /api/attendance/checkin
+  -> Firestore class lookup
+  -> enrollment check
+  -> duplicate check
+  -> attendance record
 ```
 
-## Current Implementation Status
+## Architecture
 
-### ✅ Phase 1: Frontend Foundation (COMPLETED)
-- [x] **Project Setup**
-  - Next.js 15 with App Router
-  - Tailwind CSS configuration
-  - Framer Motion for animations
-  - ESLint and development tools
+```text
+Client Browser
+  - Teacher dashboard
+  - Student dashboard
+  - Check-in page
 
-- [x] **Homepage Design**
-  - Aurora background with CSS animations
-  - Cycling typewriter effect with erase functionality
-  - Responsive design with mobile support
-  - Navigation buttons (Student/Teacher)
+Next.js App Router
+  - Page routes
+  - API routes
+  - Client and server components
 
-- [x] **Teacher Dashboard**
-  - Dark theme with OnePlus orange accents
-  - Three main sections: Classes, Schedule, How To
-  - Class management interface with sample data
-  - Responsive grid layout for class cards
+Firebase
+  - Authentication
+  - Firestore
+  - Optional profile image storage through Firestore data URLs
 
-- [x] **Student Dashboard**
-  - Blue-themed interface matching student role
-  - Class joining functionality with invitation links
-  - Responsive design consistent with teacher portal
-  - Class overview and management interface
-
-- [x] **Navigation & Routing**
-  - Set up App Router structure
-  - Teacher dashboard routing (`/teacher/dashboard`)
-  - Student dashboard routing (`/student/dashboard`)
-  - Component-based architecture
-
-### ✅ Phase 2: Authentication System (COMPLETED)
-- [x] **Firebase Setup**
-  - Firebase project configuration with environment variables
-  - Authentication service setup
-  - Firestore database configuration
-  - Security rules implementation
-
-- [x] **Auth Components**
-  - Teacher login/register forms with role-based routing
-  - Student login/register forms with blue theme
-  - Password confirmation validation
-  - Email verification system (with spam filter handling)
-  - Google OAuth integration
-  - Error handling with user-friendly messages
-
-- [x] **User Management**
-  - Complete teacher registration flow
-  - Complete student registration flow
-  - Role-based authentication with `useAuth` hook
-  - Protected routes with `withAuth` HOC
-  - User data storage in Firestore
-  - Sign-out functionality
-
-- [x] **Security Features**
-  - Password strength validation (6+ characters)
-  - Email verification on registration
-  - Role-based access control
-  - Protected dashboard routes
-  - Secure session management
-
-### � Phase 3: Backend & Database (IN PROGRESS)
-- [x] **Database Schema Implementation**
-  - Users collection with role-based structure
-  - User data storage in Firestore
-  - Email verification tracking
-  - Proper indexing for user queries
-
-- [x] **Class Management Foundation**
-  - Local storage implementation for development
-  - Class creation and management interface
-  - Invitation link generation system
-  - Class code sanitization and URL safety
-
-- [ ] **Migration to Firestore**
-  - Move class data from localStorage to Firestore
-  - Real-time class synchronization
-  - Teacher-student relationship management
-  - Class enrollment system backend
-
-- [ ] **API Routes Development**
-  - RESTful API design
-  - CRUD operations for classes
-  - Student enrollment endpoints
-  - Data validation middleware
-
-### ✅ Phase 4: NFC Integration & Attendance (COMPLETED)
-- [x] **NFC Tag Management**
-  - NFC check-in link generation system
-  - Tag-to-class association via invite codes
-  - Unique identifier management
-  - Copy NFC link functionality for teachers
-
-- [x] **Web NFC API Integration**
-  - Browser-based check-in via URL links
-  - Cross-platform compatibility (works on any device)
-  - Automatic attendance marking on link access
-  - Fallback method for non-NFC devices (direct URL access)
-
-- [x] **Attendance System**
-  - Real-time check-in flow via `/checkin/[classCode]`
-  - Attendance status tracking (present/absent)
-  - Timestamp recording and validation
-  - Duplicate check-in prevention (one check-in per day)
-
-- [x] **Attendance Dashboard**
-  - Live attendance view for teachers
-  - Student list with attendance status
-  - NFC link management interface
-  - Student profile integration
-
-### 📋 Phase 5: Core Features Enhancement (PLANNED)
-- [ ] **Class Management**
-  - Add/Edit/Delete classes
-  - Student enrollment system
-  - Class scheduling
-
-- [ ] **NFC Integration**
-  - NFC reader integration
-  - Attendance check-in flow
-  - Real-time attendance updates
-
-### 📋 Phase 5: Advanced Features (PLANNED)
-- [ ] **Analytics & Reporting**
-  - Attendance statistics
-  - Export functionality
-  - Data visualization
-
-- [ ] **Notifications**
-  - Email notifications
-  - Push notifications
-  - Attendance alerts
-
-## Database Design
-
-### Collections Schema (Firestore)
-
-#### Users Collection
-```javascript
-{
-  uid: string,           // Firebase Auth UID
-  email: string,
-  role: 'teacher' | 'student',
-  profile: {
-    firstName: string,
-    lastName: string,
-    avatar?: string,
-  },
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
+NFC Tags
+  - Store class check-in URLs
+  - Launch browser check-in flow
 ```
-
-#### Classes Collection
-```javascript
-{
-  id: string,
-  teacherId: string,     // Reference to teacher
-  name: string,
-  code: string,          // Unique class code
-  description?: string,
-  schedule: {
-    days: string[],      // ['monday', 'wednesday', 'friday']
-    time: string,        // '09:00'
-    duration: number,    // in minutes
-  },
-  room: string,
-  students: string[],    // Array of student UIDs
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
-```
-
-#### Attendance Collection
-```javascript
-{
-  id: string,
-  classId: string,
-  studentId: string,
-  teacherId: string,
-  checkInTime: timestamp,
-  nfcId?: string,        // NFC tag identifier
-  status: 'present' | 'late' | 'absent',
-  date: string,          // YYYY-MM-DD format
-  createdAt: timestamp
-}
-```
-
-## API Design
-
-### Authentication Endpoints
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `GET /api/auth/profile` - Get user profile
-
-### Class Management Endpoints
-- `GET /api/classes` - Get user's classes
-- `POST /api/classes` - Create new class
-- `GET /api/classes/:id` - Get class details
-- `PUT /api/classes/:id` - Update class
-- `DELETE /api/classes/:id` - Delete class
-- `POST /api/classes/:id/students` - Add student to class
-
-### Attendance Endpoints
-- `POST /api/attendance/checkin` - NFC check-in
-- `GET /api/attendance/class/:classId` - Get class attendance
-- `GET /api/attendance/student/:studentId` - Get student attendance history
-- `GET /api/attendance/reports` - Generate attendance reports
-
-## Security Considerations
-
-### Authentication & Authorization
-- Firebase Authentication for secure user management
-- JWT tokens for API authentication
-- Role-based access control (RBAC)
-- Protected routes middleware
-
-### Data Security
-- HTTPS encryption for all communications
-- Input validation and sanitization
-- SQL injection prevention (NoSQL injection for Firestore)
-- XSS protection with Content Security Policy
-
-### NFC Security
-- Encrypted NFC communication
-- Unique NFC tag identifiers
-- Time-based attendance validation
-- Anti-replay attack measures
-
-## Scalability & Performance
-
-### Frontend Optimization
-- Next.js SSR for faster initial load
-- Code splitting and lazy loading
-- Image optimization
-- CDN for static assets
-
-### Backend Optimization
-- Database indexing for common queries
-- Caching with Redis (future)
-- Connection pooling
-- Horizontal scaling with load balancers
-
-### Database Optimization
-- Firestore compound indexes
-- Pagination for large datasets
-- Data denormalization where appropriate
-- Real-time listeners optimization
 
 ## Technology Stack
 
-### Frontend
-- **Framework**: Next.js 15 (React 19)
-- **Styling**: Tailwind CSS
-- **Animations**: Framer Motion
-- **Icons**: Lucide React
-- **Language**: JavaScript (ES6+) with JSDoc
+- Next.js 15
+- React 19
+- JavaScript
+- Tailwind CSS
+- Framer Motion
+- Firebase Authentication
+- Firestore
+- Firebase Admin SDK
+- Vercel
 
-### Backend
-- **Runtime**: Node.js (Next.js API Routes)
-- **Database**: Firebase Firestore
-- **Authentication**: Firebase Auth
-- **File Storage**: Firebase Storage
+## Main Components
 
-### DevOps & Tools
-- **Version Control**: Git + GitHub
-- **Deployment**: Vercel (planned)
-- **Monitoring**: Firebase Analytics (planned)
-- **Testing**: Jest + React Testing Library (planned)
+### Teacher Portal
 
-## Development Phases
+The teacher portal allows teachers to create and manage classes, view enrolled students, copy invitation links, and copy NFC check-in links.
 
-### Current Phase: Authentication System ✅
-**Status**: COMPLETED
-**Duration**: Week 2
-**Deliverables**:
-- Firebase Authentication integration
-- Teacher and Student login/register systems
-- Role-based access control with protected routes
-- Email verification system
-- User data management in Firestore
-- Password confirmation validation
-- Google OAuth integration
+Relevant areas:
 
-### Next Phase: Backend & Database Migration 🚧
-**Status**: STARTING
-**Duration**: Week 3
-**Deliverables**:
-- Migrate class management from localStorage to Firestore
-- Implement real-time class synchronization
-- Create student enrollment system
-- Develop RESTful API routes
+```text
+app/teacher/dashboard/page.js
+app/teacher/add-class/page.js
+components/t_dashboard.jsx
+lib/teacherService.js
+```
 
-### Upcoming Phases:
-1. **Backend & Database Migration** (Week 3)
-   - Move from localStorage to Firestore
-   - Real-time data synchronization
-   - Student enrollment backend
+### Student Portal
 
-2. **NFC Integration & Experimentation** (Week 3-4) ⚡ ACCELERATED
-   - NFC tag experimentation and testing
-   - Web NFC API integration
-   - Attendance check-in flow development
-   - Real-time attendance updates
+The student portal allows students to join classes, view enrolled classes, and access attendance-related information.
 
-3. **Core Features & Attendance System** (Week 4-5)
-   - Complete class management system
-   - Advanced NFC attendance tracking
-   - Attendance history and reporting
+Relevant areas:
 
-4. **Advanced Features** (Week 6)
-   - Analytics and reporting system
-   - Email notifications
-   - Export functionality
+```text
+app/student/dashboard/page.js
+app/student/join/[code]/page.js
+components/s_dashboard.jsx
+lib/studentService.js
+```
 
-5. **Testing & Optimization** (Week 7)
-   - Comprehensive testing suite
-   - Performance optimization
-   - Security audit
+### Check-In Flow
 
-6. **Deployment & Monitoring** (Week 8)
-   - Production deployment
-   - Monitoring and analytics setup
-   - Documentation completion
+The check-in page is opened through an NFC tag or direct link. It loads class data, verifies authentication state, and submits the check-in request.
 
----
+Relevant areas:
 
-## Progress Tracking
+```text
+app/checkin/[classCode]/page.js
+app/api/attendance/checkin/route.js
+```
 
-### Week 1 Achievements ✅
-- [x] Project initialization and setup
-- [x] Homepage with cycling typewriter effects
-- [x] Teacher dashboard with dark theme
-- [x] Responsive design implementation
-- [x] Git repository setup and documentation
+### Shared Services
 
-### Week 2 Achievements ✅
-- [x] Firebase project configuration and setup
-- [x] Complete authentication system (teacher + student)
-- [x] Role-based access control with protected routes
-- [x] Email verification system implementation
-- [x] Password confirmation validation
-- [x] Google OAuth integration
-- [x] User data management in Firestore
-- [x] Class management UI with invitation links
-- [x] Code cleanup and optimization
-- [x] Console.log cleanup and production readiness
+Shared service files isolate Firebase and application logic from UI components.
 
-### Week 3 Achievements ✅ 
-- [x] **NFC Integration System Complete**
-  - NFC check-in page (`/checkin/[classCode]`) with automatic attendance marking
-  - Attendance API endpoint for real-time check-in processing
-  - Teacher attendance dashboard with student list and NFC link management
-  - Student profile integration for proper name display
+```text
+lib/firebase.js
+lib/firebase-admin.js
+lib/auth.js
+lib/userService.js
+lib/teacherService.js
+lib/studentService.js
+lib/profileUtils.js
+```
 
-- [x] **Core NFC Features**
-  - Copy NFC check-in link functionality
-  - Automatic attendance marking when students access NFC links
-  - Duplicate check-in prevention (one attendance per day)
-  - Cross-device compatibility (works on any smartphone)
+## Data Model
 
-- [x] **Attendance Management**
-  - Real-time attendance tracking dashboard
-  - Student enrollment verification
-  - Check-in timestamp recording
-  - Attendance status display (Present/Absent)
+### Users Collection
 
-### Week 3 Opportunities 🚀
-- **NFC Tags Available**: Physical NFC tags delivered for testing
-- **Web NFC API**: Modern browsers support NFC reading
-- **Real-world Testing**: Can test actual tap-to-attend functionality
-- **Early Prototype**: Opportunity to create working attendance demo
+Stores application user records linked to Firebase Authentication users.
 
----
+```text
+users/{userId}
+  email: string
+  name: string
+  role: "teacher" | "student"
+  emailVerified: boolean
+  profile fields
+  createdAt: timestamp
+  updatedAt: timestamp
+```
 
-*This document will be updated as the project progresses. Each phase completion will be marked and new phases will be detailed.*
+### Classes Collection
+
+Stores teacher-created class data and enrolled student IDs.
+
+```text
+classes/{classId}
+  teacherId: string
+  className: string
+  subject: string
+  section: string
+  room: string
+  schedule: object
+  classCode: string
+  inviteCode: string
+  students: string[]
+  createdAt: timestamp
+  updatedAt: timestamp
+```
+
+### Attendance Collection
+
+Stores one attendance record per student, class, and date.
+
+```text
+attendance/{studentId_classId_date}
+  studentId: string
+  classId: string
+  teacherId: string
+  checkInTime: timestamp
+  method: "nfc" | string
+  status: "present"
+  date: string
+  createdAt: timestamp
+```
+
+## Route Design
+
+### Page Routes
+
+```text
+/                         Home page
+/teacher/login            Teacher login
+/student/login            Student login
+/teacher/dashboard        Teacher dashboard
+/teacher/add-class        Class creation
+/student/dashboard        Student dashboard
+/student/join/[code]      Student class join
+/checkin/[classCode]      NFC or direct-link check-in
+```
+
+### API Routes
+
+```text
+/api/teacher/classes
+/api/teacher/classes/[classId]
+/api/teacher/classes/[classId]/students
+/api/student/classes
+/api/student/classes/[classId]
+/api/classes/lookup/[code]
+/api/attendance/checkin
+/api/user/profile/[userId]
+/api/user/profiles
+/api/user/profile/upload
+```
+
+## Check-In Sequence
+
+1. Teacher copies the NFC check-in link for a class.
+2. Teacher writes the URL to an NFC tag.
+3. Student taps the NFC tag.
+4. The phone opens `/checkin/[classCode]`.
+5. The check-in page loads class information.
+6. The page confirms the student is signed in.
+7. The page submits `classCode`, `userId`, and method to `/api/attendance/checkin`.
+8. The API route resolves the class by `classCode`.
+9. If needed, the API falls back to legacy `inviteCode`.
+10. The API verifies that the student is enrolled in the class.
+11. The API checks for an existing attendance record for the same student, class, and date.
+12. If no record exists, the API writes a new attendance record.
+13. The page displays success or duplicate-check-in feedback.
+
+## Duplicate Prevention
+
+Attendance records use a deterministic ID:
+
+```text
+studentId_classId_YYYY-MM-DD
+```
+
+The API also queries Firestore for an existing record with the same student ID, class ID, and date before writing. This prevents repeated scans from creating multiple attendance records for the same class session.
+
+## Class Code Compatibility
+
+Attendly currently supports multiple class-code field names because the data model evolved during development:
+
+```text
+classCode
+inviteCode
+code
+```
+
+New link generation prefers `classCode`. The check-in API searches by `classCode` first and falls back to `inviteCode` for older records.
+
+## Security Model
+
+### Current Protections
+
+- Firebase Authentication for user identity.
+- Role-aware student and teacher interfaces.
+- Server-side check-in API validates required fields.
+- Class lookup occurs server-side.
+- Enrollment is checked before attendance is recorded.
+- Duplicate attendance is blocked.
+- NFC tags store URLs, not private credentials.
+
+### Required Production Hardening
+
+- Review and enforce Firestore security rules.
+- Enforce stronger server-side role checks for teacher-only operations.
+- Remove debugging console logs from production flows.
+- Add rate limiting or abuse protection for check-in endpoints.
+- Validate all write operations against the authenticated user, not only client-provided IDs.
+- Avoid storing sensitive profile data unless required.
+
+## Reliability Considerations
+
+- NFC tags may fail or be unavailable, so the same check-in URL can be opened directly.
+- Class lookup supports legacy field names to avoid breaking older class records.
+- Duplicate prevention makes repeated taps safe.
+- Firebase and Vercel provide managed infrastructure for the prototype.
+
+## Limitations
+
+- The current NFC model uses URL tags rather than native browser NFC reading.
+- Attendance is based on opening the check-in link while authenticated.
+- The current prototype does not yet enforce time-window validation for class sessions.
+- Reporting and analytics are limited.
+- Production security rules require review before deployment in a real institution.
+
+## Future Work
+
+- Add class-session time windows and late/absent logic.
+- Add attendance exports and analytics.
+- Add automated tests for check-in and class lookup.
+- Add stronger server-side authorization checks.
+- Add organization-level administration.
+- Add configurable NFC tag management tools.
+- Improve reporting for teachers and students.
+

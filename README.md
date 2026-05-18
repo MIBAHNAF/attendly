@@ -1,351 +1,221 @@
-# Attendly - NFC Attendance Management System
+# Attendly
 
-> "Google Classroom meets Modern NFC Attendance Tracking" - Complete attendance solution with real-time check-ins
+Attendly is a web-based attendance platform for classes that use NFC tags or direct check-in links. Teachers create classes, generate join and check-in links, and monitor attendance. Students join classes, check in through a class-specific link, and view their attendance history.
 
-Attendly is a comprehensive NFC-powered attendance management platform that provides seamless classroom management with modern web technologies, designed to be scalable and deployable for educational institutions worldwide.
+The project is built with Next.js, Firebase Authentication, Firestore, and Vercel-oriented deployment.
 
-## 🚀 Key Features
+## Features
 
-- **🏷️ NFC Check-in System**: Students tap their phone to NFC tags for instant attendance marking
-- **👨‍🏫 Teacher Dashboard**: Complete class management with real-time attendance monitoring
-- **👨‍🎓 Student Portal**: Class enrollment and attendance history tracking
-- **🔗 Smart Link Generation**: Automatic NFC check-in link creation for each class
-- **📱 Cross-Device Compatibility**: Works on any smartphone with NFC or direct link access
-- **🔐 Secure Authentication**: Firebase Auth with Google OAuth integration
-- **⚡ Real-time Updates**: Live attendance tracking with Firestore
-- **📊 Attendance Analytics**: Comprehensive attendance monitoring and reporting
-- **🌐 Responsive Design**: Works perfectly on desktop and mobile devices
+- Teacher and student sign-in flows
+- Teacher dashboard for creating and managing classes
+- Student dashboard for joining classes and viewing attendance
+- Class invitation links
+- NFC check-in links for programmable NFC tags
+- Attendance records stored in Firestore
+- Duplicate check-in prevention for the same student, class, and day
+- Firebase-backed profile and class management
 
-## 🎯 How It Works
+## How NFC Check-In Works
 
-### For Teachers:
-1. **Create Classes** → Add students via invitation links
-2. **Generate NFC Links** → Copy check-in links for each class  
-3. **Program NFC Tags** → Write links to physical NFC tags
-4. **Monitor Attendance** → Real-time dashboard shows student check-ins
+Attendly uses NFC tags as entry points into the web application. A teacher generates a class check-in URL, writes that URL to an NFC tag, and places the tag in the classroom. When a student taps the tag, the phone opens the check-in route for that class.
 
-### For Students:
-1. **Join Classes** → Use teacher's invitation link to enroll
-2. **NFC Check-in** → Tap phone to NFC tag for instant attendance
-3. **Alternative Access** → Direct link access if no NFC available
-4. **View History** → Track attendance records in student dashboard
+The check-in API verifies the student, resolves the class by `classCode` or legacy `inviteCode`, checks enrollment, prevents duplicate daily attendance records, and writes a new attendance record to Firestore.
 
-### Real-Time Flow:
-```
-Student taps NFC tag → Opens check-in link → Auto-login verification → 
-Attendance marked → Teacher dashboard updates → Complete!
+```text
+NFC tag tap -> Check-in URL -> Authenticated student -> API route -> Firestore attendance record
 ```
 
-## 🏷️ NFC Integration
+Students can also use the check-in link directly if NFC is not available.
 
-### **Supported NFC Tags:**
-- NTAG213, NTAG215, NTAG216 (recommended)
-- Any programmable NFC tag with URL record support
+## Tech Stack
 
-### **Programming NFC Tags:**
-1. Copy NFC check-in link from teacher dashboard
-2. Use NFC writing apps:
-   - **Android**: NFC Tools, TagInfo, Trigger
-   - **iPhone**: NFC TagInfo, Shortcuts app
-3. Write URL record to tag
-4. Place in classroom for student access
+- Next.js 15 with App Router
+- React 19
+- Firebase Authentication
+- Firestore
+- Firebase Admin SDK
+- Tailwind CSS
+- Framer Motion
+- Vercel deployment
 
-### **Cross-Platform Support:**
-- **NFC Enabled**: Direct tap-to-attend functionality
-- **Non-NFC Devices**: QR codes or direct link sharing
-- **All Smartphones**: Compatible with iOS and Android browsers
+## Requirements
 
-## 📋 Prerequisites
+- Node.js 18 or newer
+- npm
+- Firebase project
+- Firestore enabled
+- Firebase Authentication enabled
+- Google OAuth provider configured in Firebase
 
-- Node.js 18+ 
-- npm or yarn
-- Firebase project with Firestore enabled
-- Google OAuth configured in Firebase
-- GitHub account (for deployment)
-- Vercel account (for hosting)
+## Local Setup
 
-## 🔧 Local Development Setup
+1. Clone the repository.
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd attendly
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   - Copy `.env.example` to `.env.local`
-   - Fill in your Firebase configuration values (see Firebase Configuration section)
-
-4. **Run the development server**
-   ```bash
-   npm run dev
-   ```
-
-5. **Open your browser**
-   - Navigate to `http://localhost:3000`
-
-## 🔐 Firebase Configuration
-
-### Step 1: Create Firebase Project
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Create a new project
-3. Enable Firestore Database
-4. Enable Authentication with Google provider
-
-### Step 2: Get Client Configuration
-1. Go to Project Settings > General
-2. Copy the following values to your `.env.local`:
-   - API Key → `NEXT_PUBLIC_FIREBASE_API_KEY`
-   - Project ID → `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-   - Auth Domain → `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-   - Storage Bucket → `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-   - Messaging Sender ID → `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-   - App ID → `NEXT_PUBLIC_FIREBASE_APP_ID`
-   - Measurement ID → `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID`
-
-### Step 3: Get Admin SDK Configuration
-1. Go to Project Settings > Service Accounts
-2. Click "Generate new private key"
-3. Download the JSON file
-4. Extract these values to your `.env.local`:
-   - `project_id` → `FIREBASE_PROJECT_ID`
-   - `client_email` → `FIREBASE_CLIENT_EMAIL` 
-   - `private_key` → `FIREBASE_PRIVATE_KEY` (keep the quotes and newlines)
-
-## 🚀 Deployment to Vercel (Recommended)
-
-### Option 1: Deploy from GitHub (Easiest)
-
-1. **Push your code to GitHub**
-   ```bash
-   git add .
-   git commit -m "Ready for deployment"
-   git push origin main
-   ```
-
-2. **Connect to Vercel**
-   - Go to [Vercel Dashboard](https://vercel.com)
-   - Click "New Project"
-   - Import your GitHub repository
-   - Select the project and click "Deploy"
-
-3. **Add Environment Variables**
-   - In Vercel project settings, go to "Environment Variables"
-   - Add all variables from your `.env.local` file
-   - **Important**: Add these for all environments (Development, Preview, Production)
-   - Make sure to properly escape the `FIREBASE_PRIVATE_KEY` with quotes
-
-### Option 2: Deploy with Vercel CLI
-
-1. **Install Vercel CLI**
-   ```bash
-   npm i -g vercel
-   ```
-
-2. **Deploy**
-   ```bash
-   vercel
-   ```
-
-3. **Add environment variables during setup or later**
-   ```bash
-   vercel env add NEXT_PUBLIC_FIREBASE_API_KEY
-   vercel env add FIREBASE_PRIVATE_KEY
-   # ... add all other variables
-   ```
-
-## 🔒 Security & Production Setup
-
-### Environment Variables Checklist
-- [ ] All `NEXT_PUBLIC_*` variables are set correctly
-- [ ] All `FIREBASE_*` admin variables are set correctly  
-- [ ] Private key is properly escaped with quotes and newlines
-- [ ] Variables are added to all Vercel environments
-
-### Firebase Security Rules
-Make sure to configure proper Firestore security rules:
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users can only access their own data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Classes can be read by authenticated users
-    match /classes/{classId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == resource.data.teacherId;
-    }
-  }
-}
+```bash
+git clone https://github.com/MIBAHNAF/attendly.git
+cd attendly
 ```
 
-## 📁 Project Structure
+2. Install dependencies.
 
+```bash
+npm install
 ```
+
+3. Create the local environment file.
+
+```bash
+cp .env.example .env.local
+```
+
+4. Fill in the Firebase values in `.env.local`.
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
+
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+```
+
+5. Start the development server.
+
+```bash
+npm run dev
+```
+
+6. Open the app.
+
+```text
+http://localhost:3000
+```
+
+## Firebase Setup
+
+Create a Firebase project and enable:
+
+- Authentication
+- Google sign-in provider
+- Firestore Database
+
+For server-side API routes, generate a Firebase Admin SDK service account key and copy the following values into `.env.local`:
+
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
+
+When setting `FIREBASE_PRIVATE_KEY`, preserve newline characters using `\n`.
+
+## NFC Tag Setup
+
+1. Create or open a class from the teacher dashboard.
+2. Generate the NFC check-in link.
+3. Write the link to an NFC tag using an NFC writer app.
+4. Place the tag where students should check in.
+5. Students tap the tag and complete check-in through the web app.
+
+Recommended tags:
+
+- NTAG213
+- NTAG215
+- NTAG216
+
+Any NFC tag that supports a URL record can work.
+
+## Main Routes
+
+```text
+/                         Home page
+/teacher/login            Teacher login
+/student/login            Student login
+/teacher/dashboard        Teacher dashboard
+/student/dashboard        Student dashboard
+/student/join/[code]      Student class join flow
+/checkin/[classCode]      NFC or direct-link check-in flow
+```
+
+## API Routes
+
+```text
+/api/teacher/classes
+/api/teacher/classes/[classId]
+/api/teacher/classes/[classId]/students
+/api/student/classes
+/api/student/classes/[classId]
+/api/classes/lookup/[code]
+/api/attendance/checkin
+/api/user/profile/[userId]
+/api/user/profiles
+/api/user/profile/upload
+```
+
+## Project Structure
+
+```text
 attendly/
-├── app/
-│   ├── api/              # API routes (student, teacher, profile)
-│   ├── components/       # React components (dashboards, profile)
-│   ├── contexts/         # React contexts (auth, user)
-│   ├── hooks/           # Custom hooks
-│   └── globals.css      # Global styles
-├── lib/
-│   ├── firebase.js      # Firebase client config
-│   ├── firebase-admin.js # Firebase admin config
-│   └── utils.js         # Utility functions
-├── assets/              # Static assets and icons
-├── public/              # Public static files
-├── .env.example         # Environment template
-├── next.config.mjs      # Next.js configuration
-└── README.md           # This file
+  app/
+    api/                  Next.js API routes
+    checkin/              NFC check-in pages
+    student/              Student pages
+    teacher/              Teacher pages
+    globals.css           Global styles
+    layout.js             Root layout
+    page.js               Home page
+  components/             Shared UI and page components
+  contexts/               React context providers
+  hooks/                  Custom hooks
+  lib/                    Firebase and service utilities
+  public/                 Static assets
+  types/                  Shared type definitions
 ```
 
-## 🎯 Usage Guide
+## Deployment
 
-### For Teachers:
-1. Sign in with Google account
-2. Create classes with unique class codes
-3. Share codes with students
-4. Manage student attendance
-5. View class analytics
+The project is intended to deploy on Vercel.
 
-### For Students:
-1. Sign in with Google account  
-2. Join classes using teacher-provided codes
-3. Mark attendance when available
-4. View attendance history
+1. Push the repository to GitHub.
+2. Import the repository into Vercel.
+3. Add all variables from `.env.example` to the Vercel project settings.
+4. Set `NEXT_PUBLIC_SITE_URL` to the production domain.
+5. Deploy.
 
-## 🔧 Customization
+Build command:
 
-### Theming
-- Student interface uses blue color scheme
-- Teacher interface uses orange color scheme
-- Colors can be customized in Tailwind CSS configuration
-
-### Adding Features
-- API routes are in `/app/api/`
-- Components are in `/app/components/`
-- Database operations use Firebase Admin SDK
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Test thoroughly in development
-5. Update documentation if needed
-6. Submit a pull request
-
-## 🐛 Troubleshooting
-
-### Common Issues:
-1. **Firebase connection errors**: Check environment variables
-2. **Authentication issues**: Verify Google OAuth setup
-3. **Deployment failures**: Check Vercel environment variables
-4. **Database permissions**: Review Firestore security rules
-
-### Debug Steps:
-1. Check browser console for client errors
-2. Check Vercel function logs for server errors
-3. Verify Firebase project permissions
-4. Test environment variables locally first
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-If you encounter any issues:
-1. Check the troubleshooting section above
-2. Review environment variable configuration
-3. Ensure Firebase project has proper permissions
-4. Check Vercel deployment logs for production issues
-5. Open an issue on GitHub with detailed error information
-
-## 🌟 Deployment Checklist
-
-Before deploying:
-- [ ] All environment variables configured
-- [ ] Firebase project properly set up
-- [ ] Google OAuth configured
-- [ ] Firestore security rules updated
-- [ ] Code pushed to GitHub
-- [ ] Vercel project connected
-- [ ] Environment variables added to Vercel
-- [ ] Test deployment successful
-
----
-
-**Made with ❤️ for seamless attendance management - Deploy anywhere, use everywhere!**
-- **Class Management**: Create, manage, and schedule classes
-- **Real-time Notifications**: Email alerts for absent students
-- **Attendance Analytics**: Comprehensive reporting and analytics
-- **Invite System**: Easy class joining via invite links
-
-## 🛠 Tech Stack
-
-- **Frontend**: Next.js 15 with App Router
-- **Styling**: Tailwind CSS
-- **Authentication**: Supabase Auth
-- **Database**: Supabase PostgreSQL
-- **Email**: Resend/SendGrid
-- **Deployment**: Vercel
-
-## 📁 Project Structure
-
-```
-/app
-  /auth          # Authentication pages
-  /dashboard     # Role-based dashboards
-    /teacher     # Teacher portal
-    /student     # Student portal
-  /nfc           # NFC integration
-/lib             # Utility functions
-/types           # Type definitions
+```bash
+npm run build
 ```
 
-## 🏃‍♂️ Getting Started
+Start command:
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+```bash
+npm run start
+```
 
-2. **Run the development server:**
-   ```bash
-   npm run dev
-   ```
+## Development Commands
 
-3. **Open your browser:**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+```
 
-## 📋 Development Roadmap
+## Security Notes
 
-- [x] Project initialization
-- [ ] Authentication system
-- [ ] Teacher dashboard
-- [ ] Student dashboard
-- [ ] NFC integration
-- [ ] Email notifications
-- [ ] Attendance analytics
+- Do not commit `.env.local` or service account JSON files.
+- Keep Firebase Admin SDK credentials server-side only.
+- Review Firestore security rules before production use.
+- Treat attendance records as sensitive student data.
+- NFC tags should contain class check-in URLs only, not private credentials.
+- Production deployments should use HTTPS and authenticated check-in flows.
 
-## 📚 Documentation
+## Current Scope
 
-For detailed project planning and feature specifications, see [PROJECT_PLAN.md](./PROJECT_PLAN.md).
+Attendly is a working prototype for NFC-assisted classroom attendance. The current system focuses on class creation, enrollment, check-in, and attendance recording. Future work may include attendance analytics, exports, stronger role-based authorization, email notifications, and administrative reporting.
 
-## 🤝 Contributing
-
-This is a learning project. Feel free to suggest improvements and enhancements.
-
----
-
-Built with ❤️ using Next.js and modern web technologies.

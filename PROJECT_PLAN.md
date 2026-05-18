@@ -1,156 +1,167 @@
-# Attendly - NFC-Based Attendance Platform
-## "Google Classroom + NFC-based Attendance" for the World
+# Attendly Project Plan
 
-### 🔧 1. Project Structure Overview
-You'll have two main portals:
-- **Student Portal**
-- **Teacher Portal**
+Attendly is a web-based attendance platform that uses class-specific links and NFC tags to simplify classroom check-in. The system currently supports teacher and student portals, Firebase authentication, class management, student enrollment, NFC/direct-link check-in, and Firestore-backed attendance records.
 
-These will branch from a shared login/registration page and route users based on role.
+## Goals
 
-### 🛠 2. Core Features Breakdown
+- Provide a simple teacher workflow for creating classes and generating attendance links.
+- Provide a student workflow for joining classes and marking attendance.
+- Support NFC tags by writing class check-in URLs to programmable tags.
+- Store class, enrollment, profile, and attendance data in Firestore.
+- Prevent duplicate attendance records for the same student, class, and date.
+- Keep the system deployable on Vercel with Firebase-backed services.
 
-#### 🔐 Authentication System:
-✅ Flexible sign-up for students and teachers.
+## Current Scope
 
-**Fields:**
-- **Students:** Name, Email, Student ID, Password
-- **Teachers:** Name, Email, School/Org Name (optional), Password
-- **Backend:** Use Supabase Auth or Firebase Auth (for scalability)
+Attendly is a working prototype. It focuses on the core attendance loop:
 
-#### 🧑‍🏫 Teacher Dashboard:
-- Create multiple classes
-- Each class has:
-  - Class Name
-  - Schedule (days/times)
-  - Generated Invite Link (e.g., /join/class-id)
-  - View list of students enrolled
-- **NFC Setup:** Register NFC tag to class (write tag UID + classID to DB)
-
-#### 🎓 Student Dashboard:
-- Join class using invite link
-- View:
-  - List of enrolled classes
-  - Class schedule
-  - Attendance history
-
-#### 📆 Schedule System:
-- Viewable for both teachers & students
-- Teachers can edit, students can view only
-
-#### 📲 NFC-Based Attendance:
-- NFC tag linked to a class (class_id)
-- Students tap → System logs:
-  - StudentID, class_id, timestamp
-- Backend checks class timing, marks them present
-- Absent students (after time ends) get email notification
-
-#### 📊 Attendance Tracker:
-- Database table:
-```sql
-attendance_logs (id, student_id, class_id, date, status)
-```
-- Teacher can export/download reports
-- Auto-calculate Present/Absent %
-
-#### 📧 Email Notification System:
-- Use SMTP or an API like SendGrid/Resend
-- Triggered after class ends for absent students
-
-### 📁 Folder Structure Proposal
-```bash
-/app
-  /auth
-    login.jsx                 # React component with 'use client'
-    register.jsx              # React component with 'use client'
-  /dashboard
-    /teacher
-      create-class.jsx         # React component for class creation
-      class/[id].jsx          # Dynamic route for class details
-      schedule.jsx            # Schedule management component
-    /student
-      join-class.jsx          # React component to join classes
-      my-classes.jsx          # Student's enrolled classes
-      attendance-history.jsx  # Attendance tracking view
-  /nfc
-    tag-reader.jsx           # NFC integration component
-/lib
-  supabaseClient.js          # Database connection
-  email.js                   # Email service (SendGrid or SMTP)
-  utils.js                   # Utility functions
-/types
-  user.js                    # User type definitions (JSDoc)
-  class.js                   # Class type definitions (JSDoc)
-  attendance.js              # Attendance type definitions (JSDoc)
-/components                  # Reusable React components
-  /ui                        # UI components (buttons, modals, etc.)
-  /forms                     # Form components
-/hooks                       # Custom React hooks
-/contexts                    # React Context providers
+```text
+Teacher creates class -> Student joins class -> Teacher writes NFC link -> Student taps tag -> Attendance is recorded
 ```
 
-### ⚙️ Technologies Recommendation
-| Feature | Tool / Framework |
-|---------|------------------|
-| Frontend Framework | **React 19** with Next.js 15 (App Router) |
-| Language | **JavaScript** (ES6+) |
-| Styling | Tailwind CSS |
-| Animation | Framer Motion (optional) |
-| Auth | Supabase / Firebase |
-| DB | Supabase PostgreSQL |
-| NFC Integration | External app + NFC API |
-| Email Notifications | Resend / Nodemailer |
-| Deployment | Vercel |
+The current implementation uses NFC tags as URL launch points. The tag does not store private credentials. It stores or opens a class-specific check-in URL, and the web application handles authentication, class lookup, enrollment verification, duplicate prevention, and attendance creation.
 
-### 🚀 Step-by-Step Roadmap (MVP v1)
+## Implemented Features
 
-#### Week 1: Auth System + Role-based Routing
-- [ ] Set up Supabase / Firebase
-- [ ] Registration & login for both roles
-- [ ] Role-based dashboard routing
+- Next.js application with App Router
+- Teacher and student login flows
+- Firebase Authentication integration
+- Firestore-backed user profile storage
+- Teacher class creation and class management
+- Student class join flow by class code
+- NFC check-in page at `/checkin/[classCode]`
+- Attendance API route at `/api/attendance/checkin`
+- Class lookup by `classCode` with `inviteCode` fallback
+- Invitation link generation
+- NFC check-in link generation
+- Duplicate daily check-in prevention
+- Teacher attendance dashboard
+- Student dashboard with enrolled classes
+- Profile management and profile image upload
 
-#### Week 2: Teacher Dashboard + Class Creation
-- [ ] Class creation form
-- [ ] Auto-generate invite link
-- [ ] Class list & delete/edit support
+## Core User Flows
 
-#### Week 3: Student Dashboard + Join Class
-- [ ] Join class via invite
-- [ ] See list of enrolled classes
-- [ ] Show class schedule
+### Teacher Flow
 
-#### Week 4: NFC Integration & Attendance Logging
-- [ ] Build simple tag-reader.jsx to interface with external NFC reader
-- [ ] Match UID → classID → studentID
-- [ ] Store attendance in DB
+1. Teacher signs in.
+2. Teacher creates a class.
+3. System generates a class code.
+4. Teacher shares the join link with students.
+5. Teacher copies the NFC check-in link.
+6. Teacher writes the check-in link to an NFC tag.
+7. Teacher monitors attendance from the dashboard.
 
-#### Week 5: Email Notifications + Attendance Summary
-- [ ] Send email to absentees
-- [ ] Add attendance report for teachers
+### Student Flow
 
-### 🔄 Long-Term Scaling Ideas
-| Scaling Feature | Implementation Suggestion |
-|----------------|---------------------------|
-| Multi-language Support | i18n / next-intl |
-| Org-level Management | Add "Organization" as entity |
-| Payment for Premium Features | Stripe integration |
-| NFC Web App / Native App | Build mobile wrapper with NFC read/write |
-| Auto SMS Integration | Reuse logic from SMS_System |
+1. Student signs in.
+2. Student joins a class using a class code or join link.
+3. Student taps the class NFC tag or opens the check-in link.
+4. The app verifies enrollment.
+5. The app records attendance if the student has not already checked in that day.
+6. The student sees success or duplicate-check-in feedback.
 
-### 📋 Current Status
-- [x] Project plan documented
-- [x] Next.js project initialized with **React + JavaScript**
-- [x] Folder structure created
-- [x] React components & utilities scaffolded
-- [x] Authentication context setup
-- [ ] Supabase setup
-- [ ] Auth system implementation
-- [ ] Teacher dashboard
-- [ ] Student dashboard
-- [ ] NFC integration
-- [ ] Email notifications
-- [ ] Deployment
+## Technical Milestones
 
----
-*Created: August 4, 2025*
-*Vision: Building the global standard for NFC-based attendance tracking*
+### Completed
+
+- Project setup with Next.js, React, Tailwind CSS, and Firebase.
+- Firebase authentication and profile data flow.
+- Teacher and student dashboards.
+- Class creation and enrollment.
+- NFC/direct-link check-in flow.
+- Firestore attendance records.
+- Duplicate attendance protection.
+- Deployment-oriented environment configuration.
+
+### In Progress
+
+- Documentation cleanup.
+- Link generation consistency across `classCode`, `inviteCode`, and legacy code fields.
+- Production deployment hardening.
+- Firestore rule review.
+
+### Planned
+
+- Attendance analytics and summaries.
+- CSV export or report generation.
+- More complete role-based authorization on server routes.
+- Better teacher-facing attendance views by date and class.
+- Email notifications for absences or class activity.
+- Admin or organization-level management.
+- Automated tests for check-in and class lookup flows.
+
+## Data Model Summary
+
+### Users
+
+Stores user profile and role information.
+
+```text
+users/{userId}
+  email
+  name
+  role
+  profile fields
+  createdAt
+  updatedAt
+```
+
+### Classes
+
+Stores teacher-created class records.
+
+```text
+classes/{classId}
+  teacherId
+  className
+  subject
+  section
+  room
+  schedule
+  classCode
+  inviteCode
+  students[]
+  createdAt
+  updatedAt
+```
+
+### Attendance
+
+Stores daily check-in records.
+
+```text
+attendance/{studentId_classId_date}
+  studentId
+  classId
+  teacherId
+  checkInTime
+  method
+  status
+  date
+  createdAt
+```
+
+## Development Priorities
+
+1. Stabilize Firebase security rules for production use.
+2. Remove debugging logs from production-facing helper functions.
+3. Add tests for class lookup, check-in, and duplicate prevention.
+4. Add attendance reporting by date range.
+5. Improve deployment documentation and environment validation.
+
+## Risks and Constraints
+
+- NFC behavior varies by phone, browser, and operating system.
+- iOS and Android handle NFC URL tags differently, so the URL-based approach is intentionally simpler than browser-based NFC reading.
+- Attendance data is sensitive student information and must be protected.
+- Firestore security rules must be reviewed before production deployment.
+- NFC tags should only contain public check-in URLs, not secret credentials.
+
+## Success Criteria
+
+- A teacher can create a class and generate an NFC check-in link.
+- A student can join a class and check in through the link.
+- The system prevents duplicate same-day attendance.
+- The teacher dashboard reflects attendance records.
+- The project can be deployed with documented Firebase and Vercel configuration.
+
